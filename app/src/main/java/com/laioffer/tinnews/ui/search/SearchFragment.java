@@ -6,6 +6,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.fragment.NavHostFragment;
 import androidx.recyclerview.widget.GridLayoutManager;
 
 import android.util.Log;
@@ -13,11 +14,15 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
+import android.widget.Toast;
 
 import com.laioffer.tinnews.R;
 import com.laioffer.tinnews.databinding.FragmentSearchBinding;
+import com.laioffer.tinnews.model.Article;
 import com.laioffer.tinnews.repository.NewsRepository;
 import com.laioffer.tinnews.repository.NewsViewModelFactory;
+
+import static android.widget.Toast.LENGTH_SHORT;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -43,6 +48,22 @@ public class SearchFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         SearchNewsAdapter newsAdapter = new SearchNewsAdapter();
+        newsAdapter.setLikeListener(new SearchNewsAdapter.LikeListener() {
+            @Override
+            public void onLike(Article article) {
+                viewModel.setFavoriteArticleInput(article);
+            }
+
+            @Override
+            public void onClick(Article article) {
+                // TODO
+                SearchFragmentDirections.ActionTitleSearchToDetail actionTitleSearchToDetail = SearchFragmentDirections.actionTitleSearchToDetail();
+                actionTitleSearchToDetail.setArticle(article);
+                NavHostFragment.findNavController(SearchFragment.this).navigate(actionTitleSearchToDetail);
+
+
+            }
+        });
         GridLayoutManager gridLayoutManager = new GridLayoutManager(getContext(), 2);
         // we can change the size of each news by config gridLayoutManager
         binding.recyclerView.setLayoutManager(gridLayoutManager);
@@ -64,11 +85,26 @@ public class SearchFragment extends Fragment {
                 .get(SearchViewModel.class);
 //        viewModel.setSearchInput("Covid-19");
         viewModel.searchNews().observe(getViewLifecycleOwner(), newsResponse -> {
-                            if (newsResponse != null) {
-                                Log.d("SearchFragment", newsResponse.toString());
-                                newsAdapter.setArticles(newsResponse.articles);
+            if (newsResponse != null) {
+                Log.d("SearchFragment", newsResponse.toString());
+                newsAdapter.setArticles(newsResponse.articles);
+            }
+        });
+
+        viewModel
+                .onFavorite()
+                .observe(
+                        getViewLifecycleOwner(),
+                        isSuccess -> {
+                            if (isSuccess) {
+                                Toast.makeText(requireActivity(), "Success", LENGTH_SHORT).show();
+                                newsAdapter.notifyDataSetChanged();
+
+                            } else {
+                                Toast.makeText(requireActivity(), "You might have liked before", LENGTH_SHORT).show();
+
                             }
+
                         });
     }
-
 }
